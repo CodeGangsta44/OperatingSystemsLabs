@@ -7,6 +7,10 @@ size_t make_multiple_of_four(size_t size) {
   return ((size + 3) / 4) * 4;
 }
 
+size_t make_multiple_of_eight(size_t size) {
+  return ((size + 7) / 8) * 8;
+}
+
 size_t get_divided_lists_max_block_size(size_t start_size,
                                         int list_length,
                                         size_t max_size) {
@@ -55,6 +59,9 @@ size_t min_block_size_for_lists = 8;
 size_t max_block_size_for_lists;
 size_t row_size;
 
+int max_size_length = 0;
+size_t block_header_size;
+
 void init(size_t size) {
   size = make_multiple_of_four(size);
   total_size = size;
@@ -70,7 +77,13 @@ void init(size_t size) {
       list_length,
       max_block_size_for_lists);
 
+  additional_size = total_size - divided_lists_size;
+
   row_size = divided_lists_size / list_length;
+
+  for (int i = additional_size; i > 0; i /= 2, max_size_length++);
+
+  block_header_size = make_multiple_of_eight((max_size_length * 2) + 1) / 8;
 
   memset(start_pointer, 0, total_size);
 }
@@ -107,9 +120,14 @@ size_t get_size_by_address(void* pointer) {
 }
 
 void* mem_realloc(void* pointer, size_t size) {
-  void* new_pointer = alloc(size);
   size_t old_size = get_size_by_address(pointer);
-  memcpy(new_pointer, pointer, old_size);
+
+  if (old_size >= size) {
+    return pointer;
+  }
+
+  void* new_pointer = alloc(size);
+  memcpy(new_pointer, pointer, old_size < size ? old_size : size);
   mem_free(pointer);
   return new_pointer;
 }
@@ -118,4 +136,5 @@ void display() {
   printf("Min size: %d\n", (int)min_block_size_for_lists);
   printf("Max size: %d\n", (int)max_block_size_for_lists);
   printf("Total size: %d\n", (int)divided_lists_size);
+  printf("Max size length in bits: %d\n", max_size_length);
 }
