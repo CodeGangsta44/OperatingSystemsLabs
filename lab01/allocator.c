@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#include "block-header.c"
+#include "block-header.h"
+#include "allocator.h"
 
 size_t make_multiple_of_four(size_t size) {
   return ((size + 3) / 4) * 4;
@@ -63,10 +64,31 @@ size_t row_size;
 int max_size_length = 0;
 size_t block_header_size;
 
+void mem_dump() {
+
+  void* current_block_pointer = start_pointer + divided_lists_size;
+  BlockHeader current_block = read_block_header(current_block_pointer, max_size_length);
+
+  while(current_block.current_block_size > 0) {
+    current_block = read_block_header(current_block_pointer, max_size_length);
+
+    printf("\n=== HEADER ===\n");
+    printf("ADDRESS: %p\n", current_block_pointer);
+    printf("IS FREE: %s\n", current_block.is_free ? "true" : "false");
+    printf("CURRENT BLOCK SIZE: %d\n", (int)current_block.current_block_size);
+    printf("PREVIOUS BLOCK SIZE: %d\n", (int)current_block.previous_block_size);
+
+    current_block_pointer += block_header_size + current_block.current_block_size;
+  }
+
+  printf("\n\n");
+}
+
 void init(size_t size) {
   size = make_multiple_of_four(size);
   total_size = size;
   start_pointer = malloc(total_size);
+  memset(start_pointer, 0, total_size);
 
   max_block_size_for_lists =
     get_divided_lists_max_block_size(min_block_size_for_lists,
@@ -98,8 +120,6 @@ void init(size_t size) {
 
   write_block_header(start_pointer + divided_lists_size, &start_block_header, block_header_size, max_size_length);
   write_block_header(start_pointer + divided_lists_size + additional_size + block_header_size, &start_block_header, block_header_size, max_size_length);
-
-  memset(start_pointer, 0, total_size);
 }
 
 void* alloc_in_lists(size_t size) {
@@ -120,8 +140,6 @@ void* alloc_in_additional(size_t size) {
   BlockHeader best_block;
 
   while (current_block.current_block_size > 0) {
-    current_block_pointer = current_block_pointer + block_header_size + current_block.current_block_size;
-    current_block = read_block_header(current_block_pointer, max_size_length);
 
     if (current_block.is_free && (current_block.current_block_size == size
                                   ||
@@ -132,7 +150,6 @@ void* alloc_in_additional(size_t size) {
       return current_block_pointer + block_header_size;
 
     } else if (best_block_pointer == NULL && current_block.is_free && current_block.current_block_size >= size + block_header_size) {
-
       best_block_pointer = current_block_pointer;
       best_block = current_block;
 
@@ -144,6 +161,9 @@ void* alloc_in_additional(size_t size) {
         best_block_pointer = current_block_pointer;
         best_block = current_block;
     }
+
+    current_block_pointer += block_header_size + current_block.current_block_size;
+    current_block = read_block_header(current_block_pointer, max_size_length);
   }
 
   if (best_block_pointer == NULL) return NULL;
@@ -151,32 +171,31 @@ void* alloc_in_additional(size_t size) {
   void* new_block_pointer = best_block_pointer  + (best_block.current_block_size - size);
   void* next_block_pointer = best_block_pointer + best_block.current_block_size + block_header_size;
 
+  BlockHeader next_block_header = read_block_header(next_block_pointer, max_size_length);
+  next_block_header.previous_block_size = size;
+
 
   BlockHeader new_block_header;
   new_block_header.is_free = false;
   new_block_header.current_block_size = size;
   new_block_header.previous_block_size = best_block.current_block_size - block_header_size - size;
 
-  BlockHeader next_block_header = read_block_header(next_block_pointer, block_header_size);
-  next_block_header.previous_block_size = size;
-
   best_block.current_block_size = new_block_header.previous_block_size;
 
+  write_block_header(next_block_pointer, &next_block_header, block_header_size, max_size_length);
   write_block_header(best_block_pointer, &best_block, block_header_size, max_size_length);
   write_block_header(new_block_pointer, &new_block_header, block_header_size, max_size_length);
-  write_block_header(next_block_pointer, &next_block_header, block_header_size, max_size_length);
 
   return (new_block_pointer + block_header_size);
 }
 
-void* alloc(size_t size) {
+void* mem_alloc(size_t size) {
   void* result = NULL;
 
   size_t needed_size = get_rounded_size(size, min_block_size_for_lists, max_block_size_for_lists);
 
   if ((size > max_block_size_for_lists)
-      ||
-     (needed_size - size + 1 > block_header_size)) {
+      || (needed_size - size + 1 > block_header_size)) {
 
     result = alloc_in_additional(size);
   }
@@ -186,12 +205,9 @@ void* alloc(size_t size) {
   return alloc_in_lists(needed_size);
 }
 
-void free_in_lists(void* pointer) {
-  *((bool*)(--pointer)) = false;
-}
 
 void join_blocks(void* pointer) {
-  void* block_header_pointer = pointer - block_header_size;
+  void* block_header_pointer = pointer;
   BlockHeader block_header = read_block_header(block_header_pointer, max_size_length);
 
   void* next_block_header_pointer = pointer + block_header.current_block_size + block_header_size;
@@ -200,13 +216,17 @@ void join_blocks(void* pointer) {
   while (next_block_header.is_free) {
     block_header.current_block_size += next_block_header.current_block_size + block_header_size;
     next_block_header_pointer += next_block_header.current_block_size + block_header_size;
-    next_block_header =  read_block_header(next_block_header_pointer, max_size_length);
+    next_block_header = read_block_header(next_block_header_pointer, max_size_length);
   }
 
   next_block_header.previous_block_size = block_header.current_block_size;
 
   write_block_header(block_header_pointer, &block_header, block_header_size, max_size_length);
   write_block_header(next_block_header_pointer, &next_block_header, block_header_size, max_size_length);
+}
+
+void free_in_lists(void* pointer) {
+  *((bool*)(--pointer)) = false;
 }
 
 void free_in_additional(void* pointer) {
@@ -247,7 +267,7 @@ void* mem_realloc_in_lists(void* pointer, size_t size) {
     return pointer;
   }
 
-  void* new_pointer = alloc(size);
+  void* new_pointer = mem_alloc(size);
 
   if (new_pointer == NULL) return NULL;
 
@@ -257,21 +277,21 @@ void* mem_realloc_in_lists(void* pointer, size_t size) {
 }
 
 void* mem_realloc_in_additional(void* pointer, size_t size) {
-
   void* new_block_header_pointer = NULL;
   void* block_header_pointer = pointer - block_header_size;
   BlockHeader block_header = read_block_header(block_header_pointer, max_size_length);
-  size_t difference = size - block_header.current_block_size;
+  int difference = size - block_header.current_block_size;
 
   void* prev_block_header_pointer = block_header_pointer - block_header.previous_block_size - block_header_size;
-  void* next_block_header_pointer = block_header_pointer + block_header.previous_block_size + block_header_size;
+  void* next_block_header_pointer = block_header_pointer + block_header.current_block_size + block_header_size;
   BlockHeader prev_block_header = read_block_header(prev_block_header_pointer, max_size_length);
   BlockHeader next_block_header = read_block_header(next_block_header_pointer, max_size_length);
 
   void* buffer = (void*)malloc(block_header.current_block_size);
   memcpy(buffer, pointer, block_header.current_block_size);
 
-  if (difference < 0 && !next_block_header.is_free) {
+  if (block_header.current_block_size > size) {
+
     if (-difference > block_header_size) {
       block_header.current_block_size = size;
 
@@ -290,31 +310,42 @@ void* mem_realloc_in_additional(void* pointer, size_t size) {
     }
   }
 
-  if (block_header.current_block_size + prev_block_header.current_block_size > size && prev_block_header.is_free) {
-    new_block_header_pointer = block_header_pointer + difference;
+  else if (block_header.current_block_size + prev_block_header.current_block_size > size && prev_block_header.is_free) {
+    new_block_header_pointer = block_header_pointer - difference;
 
-    prev_block_header.current_block_size = prev_block_header.current_block_size - difference;
+    prev_block_header.current_block_size -= difference;
     next_block_header.previous_block_size = size;
     block_header.current_block_size = size;
+    block_header.previous_block_size = prev_block_header.current_block_size;
 
   } else if (block_header.current_block_size + next_block_header.current_block_size > size && next_block_header.is_free) {
-    next_block_header_pointer = next_block_header_pointer + difference;
-    next_block_header.current_block_size = next_block_header.current_block_size - difference;
+
+    next_block_header_pointer += difference;
+
+    next_block_header.current_block_size -= difference;
     next_block_header.previous_block_size = size;
     block_header.current_block_size = size;
+    new_block_header_pointer = block_header_pointer;
 
   } else if (block_header.current_block_size
     + prev_block_header.current_block_size
-    + next_block_header.current_block_size > size
+    + next_block_header.current_block_size >= size
     && prev_block_header.is_free
     && next_block_header.is_free) {
-      next_block_header_pointer = next_block_header_pointer + (size - block_header.current_block_size - prev_block_header.current_block_size);
+      printf("Join with both\n");
+      new_block_header_pointer = prev_block_header_pointer;
+      next_block_header_pointer += size + block_header_size;
+
+      next_block_header.current_block_size += block_header_size
+            - (size - block_header.current_block_size - prev_block_header.current_block_size);
+
       prev_block_header.current_block_size = size;
       next_block_header.previous_block_size = size;
-      next_block_header.current_block_size = next_block_header.current_block_size - (size - block_header.current_block_size - prev_block_header.current_block_size);
-      new_block_header_pointer = prev_block_header_pointer;
+      block_header.current_block_size = size;
+      block_header.previous_block_size = prev_block_header.previous_block_size;
+
     } else {
-      new_block_header_pointer = alloc(size);
+      new_block_header_pointer = mem_alloc(size);
       if (new_block_header_pointer != NULL) {
         block_header.is_free = true;
         write_block_header(pointer - block_header_size, &block_header, block_header_size, max_size_length);
@@ -327,28 +358,49 @@ void* mem_realloc_in_additional(void* pointer, size_t size) {
   memcpy(new_block_header_pointer + block_header_size, buffer, difference > 0 ? block_header.current_block_size : size);
 
   write_block_header(prev_block_header_pointer, &prev_block_header, block_header_size, max_size_length);
-  write_block_header(new_block_header_pointer, &block_header, block_header_size, max_size_length);
   write_block_header(next_block_header_pointer, &next_block_header, block_header_size, max_size_length);
+  write_block_header(new_block_header_pointer, &block_header, block_header_size, max_size_length);
 
   return (new_block_header_pointer + block_header_size);
 }
 
 void* mem_realloc(void* pointer, size_t size) {
-  size_t old_size = get_size_by_address(pointer);
 
-  if (old_size >= size) {
-    return pointer;
+  if (pointer == NULL) {
+    return mem_alloc(size);
   }
 
-  void* new_pointer = alloc(size);
-  memcpy(new_pointer, pointer, old_size < size ? old_size : size);
-  mem_free(pointer);
-  return new_pointer;
-}
+  void* result = NULL;
+  size_t old_size;
+  size_t needed_size = get_rounded_size(size, min_block_size_for_lists, max_block_size_for_lists);
+  bool is_in_lists = false;
 
-void display() {
-  printf("Min size: %d\n", (int)min_block_size_for_lists);
-  printf("Max size: %d\n", (int)max_block_size_for_lists);
-  printf("Total size: %d\n", (int)divided_lists_size);
-  printf("Max size length in bits: %d\n", max_size_length);
+  if (pointer > start_pointer &&
+    pointer <= start_pointer + divided_lists_size) {
+      is_in_lists = true;
+      old_size = get_size_by_address(pointer);
+
+  } else if (pointer > start_pointer + divided_lists_size &&
+    pointer < start_pointer + total_size) {
+      old_size = read_block_header(pointer - block_header_size, max_size_length).current_block_size;
+  }
+
+  if ((size > max_block_size_for_lists)
+       || (needed_size - size + 1 > block_header_size)) {
+
+       if (is_in_lists) result = alloc_in_additional(size);
+       else return mem_realloc_in_additional(pointer, size);
+
+  } else {
+    if (is_in_lists) return mem_realloc_in_lists(pointer, size);
+    else result = alloc_in_lists(size);
+  }
+
+  if (result != NULL) {
+    memcpy(result, pointer, old_size < size ? old_size : size);
+    is_in_lists ? free_in_lists(pointer) : free_in_additional(pointer);
+  }
+
+
+  return result;
 }

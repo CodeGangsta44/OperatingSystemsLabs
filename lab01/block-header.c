@@ -1,18 +1,12 @@
 #include <stddef.h>
 #include <stdbool.h>
-
-typedef struct BlockHeader BlockHeader;
-
-struct BlockHeader {
-  bool is_free;
-  size_t current_block_size;
-  size_t previous_block_size;
-};
+#include "block-header.h"
 
 void write_block_header(void* pointer,
                         BlockHeader* block_header,
                         size_t block_size,
                         int max_size_length) {
+
 
   unsigned char* char_pointer = (unsigned char*)pointer;
   unsigned char chunk = 0;
