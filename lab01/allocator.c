@@ -65,6 +65,13 @@ int max_size_length = 0;
 size_t block_header_size;
 
 void mem_dump() {
+  // printf("\n====== SEGREGATED LISTS DUMP ======\n");
+  //
+  // for (int i = min_block_size_for_lists; i <= max_block_size_for_lists; i *= 2) {
+  //   printf("Size %d", i)
+  // }
+
+  printf("\n====== ADDITIONAL BUFFER DUMP ======\n");
 
   void* current_block_pointer = start_pointer + divided_lists_size;
   BlockHeader current_block = read_block_header(current_block_pointer, max_size_length);
