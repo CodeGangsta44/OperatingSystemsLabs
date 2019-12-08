@@ -31,7 +31,7 @@ public class RoundRobinPlannerTest {
 
         Task task2 = Task.builder()
                 .id(2)
-                .creationTime(10)
+                .creationTime(15)
                 .duration(45)
                 .remainingTime(45)
                 .priority(0)

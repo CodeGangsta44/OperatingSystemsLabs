@@ -43,8 +43,7 @@ public class RoundRobinPlanner {
                     break;
                 } else {
                     currentTask.giveTic();
-
-                    if (currentTask.isFinished()) {
+                    if (currentTask.isFinished() || isMorePriorityTaskExist(currentTask.getPriority())) {
                         break;
                     }
                 }
@@ -110,5 +109,13 @@ public class RoundRobinPlanner {
                 .stream()
                 .flatMap(Collection::stream)
                 .forEach(Task::waitTic);
+    }
+
+    private boolean isMorePriorityTaskExist(int oldPriority) {
+        return queues.entrySet().stream()
+                .anyMatch(integerListEntry ->
+                        integerListEntry.getKey() < oldPriority
+                        &&
+                        integerListEntry.getValue().size() > 0);
     }
 }

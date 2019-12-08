@@ -37,14 +37,9 @@ public class AverageWaitingTimeByPriorityDatasetGenerator {
             tasksToDo.add(taskGenerator.generateNextTask());
         }
 
-        System.out.println(tasksToDo);
-
         RoundRobinPlanner roundRobinPlanner = new RoundRobinPlanner(25, tasksToDo);
 
         result = roundRobinPlanner.execute();
-
-        System.out.println(result);
-        System.out.println("Result list size: " + result.size());
 
         OptionalDouble avg = result.stream()
                 .mapToDouble(Task::getWaitingTime)

@@ -40,7 +40,6 @@ public class LineChartEx extends JFrame {
 
     private void initUI() {
 
-//        XYDataset dataset = createDataset();
         JFreeChart chart = createChart(dataset);
 
         ChartPanel chartPanel = new ChartPanel(chart);
@@ -52,21 +51,6 @@ public class LineChartEx extends JFrame {
         setTitle("Line chart");
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    }
-
-    private XYDataset createDataset() {
-        XYSeries series = new XYSeries("2016");
-        series.add(18, 567);
-        series.add(20, 612);
-        series.add(25, 800);
-        series.add(30, 980);
-        series.add(40, 1410);
-        series.add(50, 2350);
-
-        XYSeriesCollection dataset = new XYSeriesCollection();
-        dataset.addSeries(series);
-
-        return dataset;
     }
 
     private JFreeChart createChart(XYDataset dataset) {
