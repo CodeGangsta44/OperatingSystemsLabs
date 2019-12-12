@@ -2,6 +2,7 @@ package generator.dataset;
 
 import entity.Task;
 import generator.task.TaskGenerator;
+import lombok.Builder;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
@@ -9,24 +10,44 @@ import planner.RoundRobinPlanner;
 
 import java.util.*;
 
+@Builder
 public class AverageDowntimeByCreationIntervalDatasetGenerator {
     private Map<Integer, Double> result;
+    private int minTaskDuration;
+    private int maxTaskDuration;
+    private int minTaskPriority;
+    private int maxTaskPriority;
+    private int minCreationInterval;
+    private int maxCreationInterval;
 
-    public AverageDowntimeByCreationIntervalDatasetGenerator() {
+//    public AverageDowntimeByCreationIntervalDatasetGenerator() {
+//        result = new HashMap<>();
+//        init();
+//    }
+
+    public void init() {
         result = new HashMap<>();
-        init();
+        privateInit();
     }
 
     private double getDowntimePercentByInterval(int interval) {
         List<Task> tasksToDo = new ArrayList<>();
         TaskGenerator taskGenerator = TaskGenerator.builder()
-                .minTaskDuration(5)
-                .maxTaskDuration(95)
-                .minTaskPriority(0)
-                .maxTaskPriority(32)
+                .minTaskDuration(minTaskDuration)
+                .maxTaskDuration(maxTaskDuration)
+                .minTaskPriority(minTaskPriority)
+                .maxTaskPriority(maxTaskPriority)
                 .minCreationInterval(interval)
                 .maxCreationInterval(interval)
                 .build();
+//        TaskGenerator taskGenerator = TaskGenerator.builder()
+//                .minTaskDuration(5)
+//                .maxTaskDuration(95)
+//                .minTaskPriority(0)
+//                .maxTaskPriority(32)
+//                .minCreationInterval(interval)
+//                .maxCreationInterval(interval)
+//                .build();
 
         taskGenerator.reset();
 
@@ -44,7 +65,7 @@ public class AverageDowntimeByCreationIntervalDatasetGenerator {
         return (((double) downtime) / ((double) totalTime)) * 100;
     }
 
-    private void init() {
+    private void privateInit() {
         for (int i = 1; i <= 100; i++) {
             result.put(i, getDowntimePercentByInterval(i));
         }

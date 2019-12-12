@@ -5,12 +5,49 @@ import generator.dataset.AverageWaitingTimeByPriorityDatasetGenerator;
 
 public class Main {
     public static void main(String[] args) {
+        int minTaskDuration = 5;
+        int maxTaskDuration = 100;
+        int minTaskPriority = 0;
+        int maxTaskPriority = 32;
+        int minCreationInterval = 5;
+        int maxCreationInterval = 100;
+
+
         AverageWaitingTimeByPriorityDatasetGenerator averageWaitingTimeByPriorityDatasetGenerator =
-                new AverageWaitingTimeByPriorityDatasetGenerator();
+                AverageWaitingTimeByPriorityDatasetGenerator.builder()
+                .minTaskDuration(minTaskDuration)
+                .maxTaskDuration(maxTaskDuration)
+                .minTaskPriority(minTaskPriority)
+                .maxTaskPriority(maxTaskPriority)
+                .minCreationInterval(minCreationInterval)
+                .maxCreationInterval(maxCreationInterval)
+                .build();
+
+        averageWaitingTimeByPriorityDatasetGenerator.init();
+
+
         AverageWaitingTimeByCreationIntervalDatasetGenerator averageWaitingTimeByCreationIntervalDatasetGenerator =
-                new AverageWaitingTimeByCreationIntervalDatasetGenerator();
+                AverageWaitingTimeByCreationIntervalDatasetGenerator.builder()
+                        .minTaskDuration(minTaskDuration)
+                        .maxTaskDuration(maxTaskDuration)
+                        .minTaskPriority(minTaskPriority)
+                        .maxTaskPriority(maxTaskPriority)
+                        .minCreationInterval(minCreationInterval)
+                        .maxCreationInterval(maxCreationInterval)
+                        .build();
+        averageWaitingTimeByCreationIntervalDatasetGenerator.init();
+
         AverageDowntimeByCreationIntervalDatasetGenerator averageDowntimeByCreationIntervalDatasetGenerator =
-                new AverageDowntimeByCreationIntervalDatasetGenerator();
+                AverageDowntimeByCreationIntervalDatasetGenerator.builder()
+                        .minTaskDuration(minTaskDuration)
+                        .maxTaskDuration(maxTaskDuration)
+                        .minTaskPriority(minTaskPriority)
+                        .maxTaskPriority(maxTaskPriority)
+                        .minCreationInterval(minCreationInterval)
+                        .maxCreationInterval(maxCreationInterval)
+                        .build();
+
+        averageDowntimeByCreationIntervalDatasetGenerator.init();
 
         LineChartEx lineChartEx1 = new LineChartEx(averageWaitingTimeByPriorityDatasetGenerator.getDataset(),
                 "Час очікування", "Пріоритет", "Залежність часу очікування від пріоритету");

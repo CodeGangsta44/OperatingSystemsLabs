@@ -2,6 +2,7 @@ package generator.dataset;
 
 import entity.Task;
 import generator.task.TaskGenerator;
+import lombok.Builder;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
@@ -11,25 +12,44 @@ import planner.RoundRobinPlanner;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
+@Builder
 public class AverageWaitingTimeByPriorityDatasetGenerator {
-    NormalDistribution distribution = new NormalDistribution(16, 0.05);;
     private List<Task> result;
     private Map<Integer, Double> results = new HashMap<>();
+    private int minTaskDuration;
+    private int maxTaskDuration;
+    private int minTaskPriority;
+    private int maxTaskPriority;
+    private int minCreationInterval;
+    private int maxCreationInterval;
+//
+//    public AverageWaitingTimeByPriorityDatasetGenerator() {
+//        init();
+//    }
 
-    public AverageWaitingTimeByPriorityDatasetGenerator() {
-        init();
+    public void init() {
+        results = new HashMap<>();
+        privateInit();
     }
 
-    private void init() {
+    private void privateInit() {
         List<Task> tasksToDo = new ArrayList<>();
         TaskGenerator taskGenerator = TaskGenerator.builder()
-                .minTaskDuration(5)
-                .maxTaskDuration(100)
-                .minTaskPriority(0)
-                .maxTaskPriority(32)
-                .minCreationInterval(5)
-                .maxCreationInterval(100)
+                .minTaskDuration(minTaskDuration)
+                .maxTaskDuration(maxTaskDuration)
+                .minTaskPriority(minTaskPriority)
+                .maxTaskPriority(maxTaskPriority)
+                .minCreationInterval(minCreationInterval)
+                .maxCreationInterval(maxCreationInterval)
                 .build();
+//        TaskGenerator taskGenerator = TaskGenerator.builder()
+//                .minTaskDuration(5)
+//                .maxTaskDuration(100)
+//                .minTaskPriority(0)
+//                .maxTaskPriority(32)
+//                .minCreationInterval(5)
+//                .maxCreationInterval(100)
+//                .build();
 
         taskGenerator.reset();
 
@@ -51,13 +71,13 @@ public class AverageWaitingTimeByPriorityDatasetGenerator {
     public XYDataset getDataset() {
         XYSeries series = new XYSeries("Залежність");
 
-        for (int i = 0; i < 32; i++) {
-            series.add(i, getY(i)*getMult());
-        }
-
 //        for (int i = 0; i < 32; i++) {
-//            series.add(i, getAvgWaitingTimeByPriority(i));
+//            series.add(i, getY(i)*getMult());
 //        }
+
+        for (int i = 0; i < 32; i++) {
+            series.add(i, getAvgWaitingTimeByPriority(i));
+        }
 
         results.forEach(series::add);
 

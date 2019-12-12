@@ -69,7 +69,7 @@ public class LineChartEx extends JFrame {
         XYPlot plot = chart.getXYPlot();
 
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
-        renderer.setSeriesPaint(0, Color.GREEN);
+        renderer.setSeriesPaint(0, Color.MAGENTA);
         renderer.setSeriesStroke(0, new BasicStroke(2.0f));
 
         plot.setRenderer(renderer);
